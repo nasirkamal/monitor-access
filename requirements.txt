@@ -1,0 +1,4 @@
+pyyaml==6.0
+requests==2.31.0
+pythonping==1.1.4
+kubernetes==26.1.0

@@ -1,0 +1,91 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: monitor-access
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: pod-reader
+rules:
+  - apiGroups: [""]
+    resources: ["*"]
+    verbs: ["get", "list", "watch"]
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: pod-reader-sa
+  namespace: monitor-access
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: pod-reader-binding
+roleRef:
+  kind: ClusterRole
+  name: pod-reader
+  apiGroup: rbac.authorization.k8s.io
+subjects:
+- kind: ServiceAccount
+  name: pod-reader-sa
+  namespace: monitor-access
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: monitor-access-config
+  namespace: monitor-access
+data:
+  monitor-config.yaml: |
+    id: proxmox_lcap_cluster
+    telegram_config:
+      token: '6041776188:XXXXXXXXXXXXXX_RZS7xzYYYYYYYYYYYYYYYYYY'
+      group_ids:
+        - '-9474IIIIII'
+    monitor:
+      check_kube_api: True
+      resolve:
+        - iii-xxx-yyyyyyy.abcd.com
+        - iii-xxx-zzzzzzz.abcd.com
+      ping:
+        - 192.168.XXX.YYY
+        - 192.168.XXX.ZZZ
+      access:
+        - "https://192.168.XXX.YYYY:6443"
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: monitor-access-deployment
+  namespace: monitor-access
+  labels:
+    app: monitor-access
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: monitor-access
+  template:
+    metadata:
+      labels:
+        app: monitor-access
+    spec:
+      containers:
+        - name: monitor-access-pod
+          image: <image-repository>/repository/ect-repo/monitor-access-nk:1.0
+          volumeMounts:
+            - name: config-volume
+              mountPath: /etc/config
+      volumes:
+        - name: config-volume
+          configMap:
+            name: monitor-access-config
+      serviceAccountName: pod-reader-sa
+
